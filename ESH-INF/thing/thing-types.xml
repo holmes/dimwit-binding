@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="dimwit"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+              xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+
+  <thing-type id="room">
+    <label>Room</label>
+    <description>Controls light levels for a particular room.</description>
+
+    <channels>
+      <channel id="high" typeId="highLevel"/>
+      <channel id="low" typeId="lowLevel"/>
+    </channels>
+
+    <config-description>
+      <parameter name="zoneNumber" type="text" required="true">
+        <label>Room Values</label>
+        <description>This JSON blob determines the light levels for certain times of days.</description>
+      </parameter>
+    </config-description>
+  </thing-type>
+
+  <channel-type id="highLevel">
+    <item-type>Number</item-type>
+    <label>High Level</label>
+    <description>If the room is already at the low level, another tap should take it to this level.</description>
+  </channel-type>
+  <channel-type id="lowLevel">
+    <item-type>Number</item-type>
+    <label>Low Level</label>
+    <description>If the lights are currently off or at the high level, another tap should take it to this level.</description>
+  </channel-type>
+</thing:thing-descriptions>
