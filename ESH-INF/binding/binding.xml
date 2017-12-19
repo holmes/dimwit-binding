@@ -6,4 +6,12 @@
 	<name>Dimwit Binding</name>
 	<description>This allows you to control light levels for individual rooms based on the time of day.</description>
 	<author>holmes</author>
+
+	<config-description>
+		<parameter name="twilightPath" type="text">
+			<label>Twilight File Path</label>
+			<description>Where to load the Twilight files</description>
+			<required>true</required>
+		</parameter>
+	</config-description>
 </binding:binding>

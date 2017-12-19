@@ -22,7 +22,14 @@ public class DimwitBindingConstants {
     // List of all Thing Type UIDs
     public static final ThingTypeUID ZONE_HANDLER = new ThingTypeUID(BINDING_ID, "zone");
 
+    // Global Configuration
+    public static final String TWILIGHT_DATA_PATH = "twilightPath";
+
+    // Zone Configuration
+    public static final String REFRESH_RATE_SECONDS = "refreshRate";
+    public static final String ZONE_JSON = "zoneJson";
+
     // Zone Channels
-    public static final String CHANNEL_HIGHLEVEL = "highLevel"; // OFF/ON/MASTER
-    public static final String CHANNEL_LOWLEVEL = "lowLevel"; // 0-100
+    public static final String CHANNEL_HIGHLEVEL = "high";
+    public static final String CHANNEL_LOWLEVEL = "low";
 }

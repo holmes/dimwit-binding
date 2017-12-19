@@ -14,7 +14,11 @@
     </channels>
 
     <config-description>
-      <parameter name="zoneNumber" type="text" required="true">
+      <parameter name="refreshRate" type="decimal" required="false">
+        <label>Refresh Rate </label>
+        <description>How often the calculation should update. Defaults to 5 minutes.</description>
+      </parameter>
+      <parameter name="zoneJson" type="text" required="true">
         <label>Room Values</label>
         <description>This JSON blob determines the light levels for certain times of days.</description>
       </parameter>
