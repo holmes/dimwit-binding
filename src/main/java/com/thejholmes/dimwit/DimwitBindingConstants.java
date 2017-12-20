@@ -20,7 +20,7 @@ public class DimwitBindingConstants {
     private static final String BINDING_ID = "dimwit";
 
     // List of all Thing Type UIDs
-    public static final ThingTypeUID ZONE_HANDLER = new ThingTypeUID(BINDING_ID, "zone");
+    public static final ThingTypeUID ZONE_HANDLER = new ThingTypeUID(BINDING_ID, "room");
 
     // Global Configuration
     public static final String TWILIGHT_DATA_PATH = "twilightPath";

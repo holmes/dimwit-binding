@@ -8,23 +8,21 @@
  */
 package com.thejholmes.dimwit.handler;
 
-import com.thejholmes.dimwit.DimwitBindingConstants;
+import com.thejholmes.dimwit.LightLevels;
 import com.thejholmes.dimwit.LightZone;
-import java.time.LocalTime;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import kotlin.jvm.functions.Function0;
+import io.reactivex.Observable;
+import io.reactivex.disposables.CompositeDisposable;
 import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
-import org.eclipse.smarthome.core.types.RefreshType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static com.thejholmes.dimwit.DimwitBindingConstants.CHANNEL_HIGHLEVEL;
+import static com.thejholmes.dimwit.DimwitBindingConstants.CHANNEL_LOWLEVEL;
 
 /**
  * This does the actual refreshing and updating of LightZones based on the current time.
@@ -32,43 +30,36 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @author Jason Holmes - Initial contribution
  */
 public class DimwitZoneHandler extends BaseThingHandler {
-  private final Runnable refreshRunnable = this::handleRefresh;
-  private final LightZone lightZone;
-  private final Integer refreshRate;
+  private final Logger logger = LoggerFactory.getLogger(DimwitZoneHandler.class);
+  private final Observable<LightLevels> levels;
+  private CompositeDisposable disposable;
 
-  private ScheduledFuture<?> refreshFuture;
-
-  public DimwitZoneHandler(Thing thing, LightZone lightZone, Integer refreshRate) {
+  public DimwitZoneHandler(Thing thing, LightZone lightZone) {
     super(thing);
-    this.lightZone = lightZone;
-    this.refreshRate = refreshRate;
+    this.disposable = new CompositeDisposable();
+    this.levels = lightZone.getLightLevels();
   }
 
+  @SuppressWarnings("deprecation") // not sure what else to do here.
   @Override public void initialize() {
-    refreshFuture = scheduler.scheduleAtFixedRate(refreshRunnable, 0, refreshRate, SECONDS);
     this.updateStatus(ThingStatus.ONLINE);
+
+    disposable.dispose();
+    disposable = new CompositeDisposable();
+
+    disposable.add( //
+        levels.subscribe(levels -> {
+          updateState(CHANNEL_LOWLEVEL, new PercentType(levels.getLowLevel()));
+          updateState(CHANNEL_HIGHLEVEL, new PercentType(levels.getHighLevel()));
+        }));
   }
 
   @Override public void dispose() {
-    if (refreshFuture != null) {
-      refreshFuture.cancel(true);
-    }
+    disposable.dispose();
+    super.dispose();
   }
 
   @Override public void handleCommand(ChannelUID channelUID, Command command) {
-    if (command instanceof RefreshType) {
-      handleRefresh();
-    }
-
-    throw new IllegalArgumentException("Dimwit Binding only handles refreshes");
-  }
-
-  private void handleRefresh() {
-    Function0<LocalTime> now = LocalTime::now;
-    int lowLevel = lightZone.calculateLightLevel(now);
-    int highLevel = lightZone.highLevel(now);
-
-    updateState(DimwitBindingConstants.CHANNEL_LOWLEVEL, new PercentType(lowLevel));
-    updateState(DimwitBindingConstants.CHANNEL_HIGHLEVEL, new PercentType(highLevel));
+    logger.debug("Dimwit doesn't listen to any commands. Sorry bud.");
   }
 }

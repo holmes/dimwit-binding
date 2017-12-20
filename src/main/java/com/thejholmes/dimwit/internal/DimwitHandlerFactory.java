@@ -9,33 +9,25 @@
 package com.thejholmes.dimwit.internal;
 
 import com.google.gson.Gson;
-import com.thejholmes.dimwit.DimwitBindingConstants;
 import com.thejholmes.dimwit.LightZone;
-import com.thejholmes.dimwit.LightZoneParser;
+import com.thejholmes.dimwit.LightZoneManager;
 import com.thejholmes.dimwit.handler.DimwitZoneHandler;
-import com.thejholmes.dimwit.twilight.Twilight;
-import com.thejholmes.dimwit.twilight.TwilightProvider;
 import java.io.File;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
 
-import static com.thejholmes.dimwit.DimwitBindingConstants.REFRESH_RATE_SECONDS;
 import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_HANDLER;
 import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_JSON;
-import static java.util.concurrent.TimeUnit.HOURS;
 
 /**
  * The {@link DimwitHandlerFactory} is responsible for creating things and thing handlers.
@@ -45,12 +37,12 @@ import static java.util.concurrent.TimeUnit.HOURS;
  *
  * @author Jason Holmes - Initial contribution
  */
+@Component(service = ThingHandlerFactory.class, immediate = true, configurationPid = "binding.dimwit", configurationPolicy = ConfigurationPolicy.OPTIONAL)
 public class DimwitHandlerFactory extends BaseThingHandlerFactory {
   private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS =
       new HashSet<>(Collections.singletonList(ZONE_HANDLER));
 
-  private LightZoneParser lightZoneParser;
-  private ScheduledFuture<?> refreshFuture;
+  private LightZoneManager lightZoneManager;
 
   public DimwitHandlerFactory() {
   }
@@ -59,22 +51,15 @@ public class DimwitHandlerFactory extends BaseThingHandlerFactory {
     super.activate(componentContext);
 
     Dictionary<String, Object> properties = componentContext.getProperties();
-    String dataPath = (String) properties.get(DimwitBindingConstants.TWILIGHT_DATA_PATH);
+    //String dataPath = (String) properties.get(DimwitBindingConstants.TWILIGHT_DATA_PATH);
+    String dataPath = "/opt/sunrise-data/data";
 
-    Gson gson = new Gson();
-    TwilightProvider twilightProvider =
-        new TwilightProvider(gson, LocalDate::now, new File(dataPath));
-    lightZoneParser = new LightZoneParser(gson, new Twilight(twilightProvider::twilight));
-
-    // Refresh the zone data
-    ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool("thingHandler");
-    refreshFuture = scheduler.scheduleWithFixedDelay(twilightProvider::refresh, 0, 8, HOURS);
+    lightZoneManager = new LightZoneManager(new Gson(), new File(dataPath));
+    lightZoneManager.start();
   }
 
   @Override protected void deactivate(ComponentContext componentContext) {
-    if (refreshFuture != null) {
-      refreshFuture.cancel(true);
-    }
+    lightZoneManager.stop();
     super.deactivate(componentContext);
   }
 
@@ -83,29 +68,14 @@ public class DimwitHandlerFactory extends BaseThingHandlerFactory {
   }
 
   @Override protected ThingHandler createHandler(Thing thing) {
-    final Integer refreshRate = parseRefreshRate(thing);
     final LightZone lightZone = parseLightZone(thing);
-
-    return new DimwitZoneHandler(thing, lightZone, refreshRate);
+    return new DimwitZoneHandler(thing, lightZone);
   }
 
   private LightZone parseLightZone(Thing thing) {
     Object rawLightZone = thing.getConfiguration().get(ZONE_JSON);
     String lightZoneJson = (String) rawLightZone;
 
-    return lightZoneParser.parse(lightZoneJson);
-  }
-
-  private Integer parseRefreshRate(Thing thing) {
-    final Integer refreshRate;
-    final Object rawRefreshRate = thing.getConfiguration().get(REFRESH_RATE_SECONDS);
-    if (rawRefreshRate instanceof BigDecimal) {
-      refreshRate = ((BigDecimal) rawRefreshRate).intValue();
-    } else if (rawRefreshRate instanceof Integer) {
-      refreshRate = (Integer) rawRefreshRate;
-    } else {
-      refreshRate = 300;
-    }
-    return refreshRate;
+    return lightZoneManager.getParser().parse(lightZoneJson);
   }
 }
