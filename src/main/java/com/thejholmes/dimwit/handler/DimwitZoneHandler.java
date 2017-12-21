@@ -18,6 +18,7 @@ import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,13 +32,22 @@ import static com.thejholmes.dimwit.DimwitBindingConstants.CHANNEL_LOWLEVEL;
  */
 public class DimwitZoneHandler extends BaseThingHandler {
   private final Logger logger = LoggerFactory.getLogger(DimwitZoneHandler.class);
+  private final LightZone lightZone;
   private final Observable<LightLevels> levels;
   private CompositeDisposable disposable;
+
+  // Used for caching last levels when a refresh is requested.
+  private PercentType lowLevel;
+  private PercentType highLevel;
 
   public DimwitZoneHandler(Thing thing, LightZone lightZone) {
     super(thing);
     this.disposable = new CompositeDisposable();
+    this.lightZone = lightZone;
     this.levels = lightZone.getLightLevels();
+
+    this.lowLevel = PercentType.ZERO;
+    this.highLevel = PercentType.HUNDRED;
   }
 
   @SuppressWarnings("deprecation") // not sure what else to do here.
@@ -49,8 +59,12 @@ public class DimwitZoneHandler extends BaseThingHandler {
 
     disposable.add( //
         levels.subscribe(levels -> {
-          updateState(CHANNEL_LOWLEVEL, new PercentType(levels.getLowLevel()));
-          updateState(CHANNEL_HIGHLEVEL, new PercentType(levels.getHighLevel()));
+          logger.debug("Observed {} @ {} to {}/{}", lightZone.getDeviceId(), levels.getNow(),
+              levels.getLowLevel(), levels.getHighLevel());
+
+          lowLevel = new PercentType(levels.getLowLevel());
+          highLevel = new PercentType(levels.getHighLevel());
+          updateState();
         }));
   }
 
@@ -60,6 +74,15 @@ public class DimwitZoneHandler extends BaseThingHandler {
   }
 
   @Override public void handleCommand(ChannelUID channelUID, Command command) {
-    logger.debug("Dimwit doesn't listen to any commands. Sorry bud.");
+    logger.debug("Dimwit is being told to refresh", command);
+    if (command instanceof RefreshType) {
+      updateState();
+    }
+  }
+
+  private void updateState() {
+    logger.debug("Updating {} to {}/{}", lightZone.getDeviceId(), lowLevel, highLevel);
+    updateState(CHANNEL_LOWLEVEL, lowLevel);
+    updateState(CHANNEL_HIGHLEVEL, highLevel);
   }
 }

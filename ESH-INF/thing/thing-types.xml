@@ -9,8 +9,8 @@
     <description>Controls light levels for a particular room.</description>
 
     <channels>
-      <channel id="high" typeId="highLevel"/>
       <channel id="low" typeId="lowLevel"/>
+      <channel id="high" typeId="highLevel"/>
     </channels>
 
     <config-description>

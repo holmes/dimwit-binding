@@ -25,6 +25,8 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_HANDLER;
 import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_JSON;
@@ -42,6 +44,7 @@ public class DimwitHandlerFactory extends BaseThingHandlerFactory {
   private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS =
       new HashSet<>(Collections.singletonList(ZONE_HANDLER));
 
+  private final Logger logger = LoggerFactory.getLogger(DimwitZoneHandler.class);
   private LightZoneManager lightZoneManager;
 
   public DimwitHandlerFactory() {
@@ -76,6 +79,11 @@ public class DimwitHandlerFactory extends BaseThingHandlerFactory {
     Object rawLightZone = thing.getConfiguration().get(ZONE_JSON);
     String lightZoneJson = (String) rawLightZone;
 
-    return lightZoneManager.getParser().parse(lightZoneJson);
+    logger.debug("Parsing new zone: {}", lightZoneJson);
+    LightZone lightZone = lightZoneManager.getParser().parse(lightZoneJson);
+    logger.debug("Parsed zone: {} w/ {} frames", lightZone.getDeviceId(),
+        lightZone.getTimeFrames().size());
+
+    return lightZone;
   }
 }
