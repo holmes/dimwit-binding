@@ -9,7 +9,6 @@
 package com.thejholmes.dimwit.internal;
 
 import com.google.gson.Gson;
-import com.thejholmes.dimwit.LightZone;
 import com.thejholmes.dimwit.LightZoneManager;
 import com.thejholmes.dimwit.handler.DimwitZoneHandler;
 import java.io.File;
@@ -29,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_HANDLER;
-import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_JSON;
 
 /**
  * The {@link DimwitHandlerFactory} is responsible for creating things and thing handlers.
@@ -71,19 +69,6 @@ public class DimwitHandlerFactory extends BaseThingHandlerFactory {
   }
 
   @Override protected ThingHandler createHandler(Thing thing) {
-    final LightZone lightZone = parseLightZone(thing);
-    return new DimwitZoneHandler(thing, lightZone);
-  }
-
-  private LightZone parseLightZone(Thing thing) {
-    Object rawLightZone = thing.getConfiguration().get(ZONE_JSON);
-    String lightZoneJson = (String) rawLightZone;
-
-    logger.debug("Parsing new zone: {}", lightZoneJson);
-    LightZone lightZone = lightZoneManager.getParser().parse(lightZoneJson);
-    logger.debug("Parsed zone: {} w/ {} frames", lightZone.getDeviceId(),
-        lightZone.getTimeFrames().size());
-
-    return lightZone;
+    return new DimwitZoneHandler(thing, lightZoneManager.getParser());
   }
 }

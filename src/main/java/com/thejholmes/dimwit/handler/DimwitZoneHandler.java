@@ -8,9 +8,8 @@
  */
 package com.thejholmes.dimwit.handler;
 
-import com.thejholmes.dimwit.LightLevels;
 import com.thejholmes.dimwit.LightZone;
-import io.reactivex.Observable;
+import com.thejholmes.dimwit.LightZoneParser;
 import io.reactivex.disposables.CompositeDisposable;
 import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -24,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.thejholmes.dimwit.DimwitBindingConstants.CHANNEL_HIGHLEVEL;
 import static com.thejholmes.dimwit.DimwitBindingConstants.CHANNEL_LOWLEVEL;
+import static com.thejholmes.dimwit.DimwitBindingConstants.ZONE_JSON;
 
 /**
  * This does the actual refreshing and updating of LightZones based on the current time.
@@ -32,19 +32,18 @@ import static com.thejholmes.dimwit.DimwitBindingConstants.CHANNEL_LOWLEVEL;
  */
 public class DimwitZoneHandler extends BaseThingHandler {
   private final Logger logger = LoggerFactory.getLogger(DimwitZoneHandler.class);
-  private final LightZone lightZone;
-  private final Observable<LightLevels> levels;
+  private final LightZoneParser lightZoneParser;
   private CompositeDisposable disposable;
 
   // Used for caching last levels when a refresh is requested.
+  private String deviceId;
   private PercentType lowLevel;
   private PercentType highLevel;
 
-  public DimwitZoneHandler(Thing thing, LightZone lightZone) {
+  public DimwitZoneHandler(Thing thing, LightZoneParser lightZoneParser) {
     super(thing);
     this.disposable = new CompositeDisposable();
-    this.lightZone = lightZone;
-    this.levels = lightZone.getLightLevels();
+    this.lightZoneParser = lightZoneParser;
 
     this.lowLevel = PercentType.ZERO;
     this.highLevel = PercentType.HUNDRED;
@@ -57,8 +56,11 @@ public class DimwitZoneHandler extends BaseThingHandler {
     disposable.dispose();
     disposable = new CompositeDisposable();
 
+    LightZone lightZone = parseLightZone(thing);
+    deviceId = lightZone.getDeviceId();
+
     disposable.add( //
-        levels.subscribe(levels -> {
+        lightZone.getLightLevels().subscribe(levels -> {
           logger.debug("Observed {} @ {} to {}/{}", lightZone.getDeviceId(), levels.getNow(),
               levels.getLowLevel(), levels.getHighLevel());
 
@@ -81,8 +83,20 @@ public class DimwitZoneHandler extends BaseThingHandler {
   }
 
   private void updateState() {
-    logger.debug("Updating {} to {}/{}", lightZone.getDeviceId(), lowLevel, highLevel);
+    logger.debug("Updating {} to {}/{}", deviceId, lowLevel, highLevel);
     updateState(CHANNEL_LOWLEVEL, lowLevel);
     updateState(CHANNEL_HIGHLEVEL, highLevel);
+  }
+
+  private LightZone parseLightZone(Thing thing) {
+    Object rawLightZone = thing.getConfiguration().get(ZONE_JSON);
+    String lightZoneJson = (String) rawLightZone;
+
+    logger.debug("Parsing new zone: {}", lightZoneJson);
+    LightZone lightZone = lightZoneParser.parse(lightZoneJson);
+    logger.debug("Parsed zone: {} w/ {} frames", lightZone.getDeviceId(),
+        lightZone.getTimeFrames().size());
+
+    return lightZone;
   }
 }
